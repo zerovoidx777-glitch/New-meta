@@ -1,0 +1,798 @@
+-- =========================================================
+-- LS HUB ULTIMATE v10 (SMOOTH AIM + FOV CIRCLE + SNAP BREAK)
+-- Theme ID: 8425069728 | Delta & Xeno Compatible
+-- =========================================================
+
+local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
+local UserInputService = game:GetService("UserInputService")
+local TeleportService = game:GetService("TeleportService")
+local Lighting = game:GetService("Lighting")
+local LocalPlayer = Players.LocalPlayer
+
+-- Target GUI Setup
+local TargetGui = (gethui and gethui()) or game:GetService("CoreGui")
+if not TargetGui or not pcall(function() return TargetGui.Name end) then
+    TargetGui = LocalPlayer:WaitForChild("PlayerGui")
+end
+
+if TargetGui:FindFirstChild("LSHubUltimate") then
+    TargetGui.LSHubUltimate:Destroy()
+end
+
+-- ScreenGui
+local ScreenGui = Instance.new("ScreenGui")
+ScreenGui.Name = "LSHubUltimate"
+ScreenGui.ResetOnSpawn = false
+ScreenGui.Parent = TargetGui
+
+-- Floating Toggle Button
+local ToggleBtn = Instance.new("ImageButton")
+ToggleBtn.Size = UDim2.fromOffset(48, 48)
+ToggleBtn.Position = UDim2.new(0.05, 0, 0.2, 0)
+ToggleBtn.BackgroundColor3 = Color3.fromRGB(20, 20, 25)
+ToggleBtn.Image = "rbxassetid://8425069728"
+ToggleBtn.Active = true
+ToggleBtn.Draggable = true
+ToggleBtn.ZIndex = 10000
+ToggleBtn.Parent = ScreenGui
+
+local BtnCorner = Instance.new("UICorner")
+BtnCorner.CornerRadius = UDim.new(0, 12)
+BtnCorner.Parent = ToggleBtn
+
+local BtnStroke = Instance.new("UIStroke")
+BtnStroke.Color = Color3.fromRGB(150, 100, 255)
+BtnStroke.Thickness = 2
+BtnStroke.Parent = ToggleBtn
+
+-- Main Frame
+local MainFrame = Instance.new("Frame")
+MainFrame.Size = UDim2.fromOffset(260, 420)
+MainFrame.Position = UDim2.new(0.5, -130, 0.35, -210)
+MainFrame.BackgroundColor3 = Color3.fromRGB(15, 15, 20)
+MainFrame.BackgroundTransparency = 0.15
+MainFrame.Active = true
+MainFrame.Draggable = true
+MainFrame.Visible = true
+MainFrame.Parent = ScreenGui
+
+local MainCorner = Instance.new("UICorner")
+MainCorner.CornerRadius = UDim.new(0, 12)
+MainCorner.Parent = MainFrame
+
+local MainStroke = Instance.new("UIStroke")
+MainStroke.Color = Color3.fromRGB(150, 100, 255)
+MainStroke.Thickness = 1.5
+MainStroke.Parent = MainFrame
+
+-- Background Asset (Theme: 8425069728)
+local BgImage = Instance.new("ImageLabel")
+BgImage.Size = UDim2.new(1, 0, 1, 0)
+BgImage.BackgroundTransparency = 1
+BgImage.Image = "rbxassetid://8425069728"
+BgImage.ImageTransparency = 0.88
+BgImage.ZIndex = 0
+BgImage.Parent = MainFrame
+
+-- Header
+local TitleContainer = Instance.new("Frame")
+TitleContainer.Size = UDim2.new(1, 0, 0, 38)
+TitleContainer.BackgroundTransparency = 1
+TitleContainer.Parent = MainFrame
+
+local TitleIcon = Instance.new("ImageLabel")
+TitleIcon.Size = UDim2.fromOffset(22, 22)
+TitleIcon.Position = UDim2.new(0, 10, 0, 8)
+TitleIcon.BackgroundTransparency = 1
+TitleIcon.Image = "rbxassetid://8425069728"
+TitleIcon.Parent = TitleContainer
+
+local Title = Instance.new("TextLabel")
+Title.Size = UDim2.new(1, -40, 1, 0)
+Title.Position = UDim2.new(0, 36, 0, 0)
+Title.BackgroundTransparency = 1
+Title.Text = "⚡ LS HUB ULTIMATE v10"
+Title.TextColor3 = Color3.fromRGB(200, 150, 255)
+Title.TextSize = 14
+Title.Font = Enum.Font.SourceSansBold
+Title.TextXAlignment = Enum.TextXAlignment.Left
+Title.Parent = TitleContainer
+
+-- Scroll View
+local Scroll = Instance.new("ScrollingFrame")
+Scroll.Size = UDim2.new(1, -16, 1, -48)
+Scroll.Position = UDim2.new(0, 8, 0, 42)
+Scroll.BackgroundTransparency = 1
+Scroll.BorderSizePixel = 0
+Scroll.ScrollBarThickness = 4
+Scroll.ScrollBarImageColor3 = Color3.fromRGB(150, 100, 255)
+Scroll.CanvasSize = UDim2.new(0, 0, 0, 1000)
+Scroll.Parent = MainFrame
+
+local UIList = Instance.new("UIListLayout")
+UIList.Parent = Scroll
+UIList.Padding = UDim.new(0, 6)
+
+ToggleBtn.MouseButton1Click:Connect(function()
+    MainFrame.Visible = not MainFrame.Visible
+end)
+
+-- Feature Flags
+local Flying = false
+local Noclip = false
+local ESP_Enabled = false
+local Spin_Enabled = false
+local Follow_Enabled = false
+local Orbit_Enabled = false
+local InfJump_Enabled = false
+local LowGrav_Enabled = false
+local Hitbox_Enabled = false
+local Fullbright_Enabled = false
+local Spectate_Enabled = false
+local AutoClick_Enabled = false
+local Crosshair_Enabled = false
+
+-- Aimbot & FOV Config
+local Aimbot_Enabled = false
+local TeamCheck_Enabled = true
+local IsAimbotActive = false
+local FOV_Radius = 150 -- ขนาดวงเริ่มต้น
+
+local FlySpeed = 50
+local VehicleSpeed = 100
+local orbitAngle = 0
+local bodyVel = nil
+
+-- Player Selection
+local playerList = {}
+local targetIndex = 1
+local TargetPlayer = nil
+
+-- UI Helper Functions
+local function createButton(text)
+    local btn = Instance.new("TextButton")
+    btn.Size = UDim2.new(1, -6, 0, 34)
+    btn.BackgroundColor3 = Color3.fromRGB(30, 30, 40)
+    btn.Text = text
+    btn.TextColor3 = Color3.fromRGB(220, 220, 220)
+    btn.TextSize = 12
+    btn.Font = Enum.Font.SourceSansBold
+    btn.Parent = Scroll
+    
+    local corner = Instance.new("UICorner")
+    corner.CornerRadius = UDim.new(0, 6)
+    corner.Parent = btn
+    
+    return btn
+end
+
+local function createInput(labelText, defaultVal, callback)
+    local frame = Instance.new("Frame")
+    frame.Size = UDim2.new(1, -6, 0, 34)
+    frame.BackgroundColor3 = Color3.fromRGB(22, 22, 30)
+    frame.Parent = Scroll
+    
+    local corner = Instance.new("UICorner")
+    corner.CornerRadius = UDim.new(0, 6)
+    corner.Parent = frame
+    
+    local label = Instance.new("TextLabel")
+    label.Size = UDim2.new(0.6, 0, 1, 0)
+    label.Position = UDim2.new(0, 8, 0, 0)
+    label.BackgroundTransparency = 1
+    label.Text = labelText
+    label.TextColor3 = Color3.fromRGB(180, 180, 200)
+    label.TextSize = 11
+    label.Font = Enum.Font.SourceSansBold
+    label.TextXAlignment = Enum.TextXAlignment.Left
+    label.Parent = frame
+    
+    local box = Instance.new("TextBox")
+    box.Size = UDim2.new(0.35, -4, 0.7, 0)
+    box.Position = UDim2.new(0.63, 0, 0.15, 0)
+    box.BackgroundColor3 = Color3.fromRGB(40, 40, 50)
+    box.Text = tostring(defaultVal)
+    box.TextColor3 = Color3.fromRGB(200, 150, 255)
+    box.TextSize = 12
+    box.Font = Enum.Font.SourceSansBold
+    box.ClearTextOnFocus = false
+    box.Parent = frame
+    
+    local boxCorner = Instance.new("UICorner")
+    boxCorner.CornerRadius = UDim.new(0, 4)
+    boxCorner.Parent = box
+    
+    box.FocusLost:Connect(function()
+        local val = tonumber(box.Text)
+        if val then callback(val) end
+        box.Text = tostring(defaultVal)
+    end)
+end
+
+-- FOV Circle Visual Setup (Drawing API / ScreenGui)
+local FOVCircle = Instance.new("Frame")
+FOVCircle.Name = "LSHubFOVCircle"
+FOVCircle.AnchorPoint = Vector2.new(0.5, 0.5)
+FOVCircle.Size = UDim2.fromOffset(FOV_Radius * 2, FOV_Radius * 2)
+FOVCircle.Position = UDim2.new(0.5, 0, 0.5, 0)
+FOVCircle.BackgroundTransparency = 1
+FOVCircle.Visible = false
+FOVCircle.Parent = ScreenGui
+
+local UICircleCorner = Instance.new("UICorner")
+UICircleCorner.CornerRadius = UDim.new(1, 0)
+UICircleCorner.Parent = FOVCircle
+
+local UICircleStroke = Instance.new("UIStroke")
+UICircleStroke.Color = Color3.fromRGB(200, 100, 255)
+UICircleStroke.Transparency = 0.3
+UICircleStroke.Thickness = 1.5
+UICircleStroke.Parent = FOVCircle
+
+-- Team Check Helper
+local function isEnemy(plr)
+    if not plr or plr == LocalPlayer then return false end
+    if TeamCheck_Enabled and plr.Team and LocalPlayer.Team and plr.Team == LocalPlayer.Team then
+        return false
+    end
+    return true
+end
+
+-- Target Selection UI
+local SelectorFrame = Instance.new("Frame")
+SelectorFrame.Size = UDim2.new(1, -6, 0, 70)
+SelectorFrame.BackgroundColor3 = Color3.fromRGB(22, 22, 30)
+SelectorFrame.Parent = Scroll
+
+local SelectorCorner = Instance.new("UICorner")
+SelectorCorner.CornerRadius = UDim.new(0, 6)
+SelectorCorner.Parent = SelectorFrame
+
+local TargetTitle = Instance.new("TextLabel")
+TargetTitle.Size = UDim2.new(1, -10, 0, 20)
+TargetTitle.Position = UDim2.new(0, 5, 0, 4)
+TargetTitle.BackgroundTransparency = 1
+TargetTitle.Text = "🎯 เป้าหมาย: เลือกผู้เล่น"
+TargetTitle.TextColor3 = Color3.fromRGB(200, 150, 255)
+TargetTitle.TextSize = 12
+TargetTitle.Font = Enum.Font.SourceSansBold
+TargetTitle.Parent = SelectorFrame
+
+local PrevBtn = Instance.new("TextButton")
+PrevBtn.Size = UDim2.new(0, 30, 0, 28)
+PrevBtn.Position = UDim2.new(0, 6, 0, 34)
+PrevBtn.BackgroundColor3 = Color3.fromRGB(40, 40, 50)
+PrevBtn.Text = "◀"
+PrevBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+PrevBtn.Font = Enum.Font.SourceSansBold
+PrevBtn.Parent = SelectorFrame
+
+local PrevCorner = Instance.new("UICorner")
+PrevCorner.CornerRadius = UDim.new(0, 4)
+PrevCorner.Parent = PrevBtn
+
+local TargetLabel = Instance.new("TextLabel")
+TargetLabel.Size = UDim2.new(1, -114, 0, 28)
+TargetLabel.Position = UDim2.new(0, 40, 0, 34)
+TargetLabel.BackgroundColor3 = Color3.fromRGB(30, 30, 40)
+TargetLabel.Text = "ไม่มีผู้เล่น"
+TargetLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+TargetLabel.TextSize = 11
+TargetLabel.Font = Enum.Font.SourceSansBold
+TargetLabel.Parent = SelectorFrame
+
+local TargetLabelCorner = Instance.new("UICorner")
+TargetLabelCorner.CornerRadius = UDim.new(0, 4)
+TargetLabelCorner.Parent = TargetLabel
+
+local NextBtn = Instance.new("TextButton")
+NextBtn.Size = UDim2.new(0, 30, 0, 28)
+NextBtn.Position = UDim2.new(1, -70, 0, 34)
+NextBtn.BackgroundColor3 = Color3.fromRGB(40, 40, 50)
+NextBtn.Text = "▶"
+NextBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+NextBtn.Font = Enum.Font.SourceSansBold
+NextBtn.Parent = SelectorFrame
+
+local NextCorner = Instance.new("UICorner")
+NextCorner.CornerRadius = UDim.new(0, 4)
+NextCorner.Parent = NextBtn
+
+local RefreshBtn = Instance.new("TextButton")
+RefreshBtn.Size = UDim2.new(0, 32, 0, 28)
+RefreshBtn.Position = UDim2.new(1, -36, 0, 34)
+RefreshBtn.BackgroundColor3 = Color3.fromRGB(120, 50, 200)
+RefreshBtn.Text = "🔄"
+RefreshBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+RefreshBtn.Font = Enum.Font.SourceSansBold
+RefreshBtn.Parent = SelectorFrame
+
+local RefreshCorner = Instance.new("UICorner")
+RefreshCorner.CornerRadius = UDim.new(0, 4)
+RefreshCorner.Parent = RefreshBtn
+
+local function updatePlayerList()
+    playerList = {}
+    for _, plr in ipairs(Players:GetPlayers()) do
+        if plr ~= LocalPlayer and isEnemy(plr) then
+            table.insert(playerList, plr)
+        end
+    end
+    
+    if #playerList == 0 then
+        TargetPlayer = nil
+        TargetLabel.Text = "ไม่มีศัตรูในรายการ"
+    else
+        if targetIndex > #playerList then targetIndex = 1 end
+        if targetIndex < 1 then targetIndex = #playerList end
+        TargetPlayer = playerList[targetIndex]
+        TargetLabel.Text = TargetPlayer.DisplayName or TargetPlayer.Name
+    end
+end
+
+PrevBtn.MouseButton1Click:Connect(function()
+    if #playerList > 0 then
+        targetIndex = targetIndex - 1
+        if targetIndex < 1 then targetIndex = #playerList end
+        updatePlayerList()
+    end
+end)
+
+NextBtn.MouseButton1Click:Connect(function()
+    if #playerList > 0 then
+        targetIndex = targetIndex + 1
+        if targetIndex > #playerList then targetIndex = 1 end
+        updatePlayerList()
+    end
+end)
+
+RefreshBtn.MouseButton1Click:Connect(function()
+    updatePlayerList()
+end)
+
+updatePlayerList()
+
+-- =========================================================
+-- 🛠️ ALL FEATURE BUTTONS
+-- =========================================================
+local AimbotBtn = createButton("🎯 ล็อกหัวอัตโนมัติ (Aimbot) : OFF")
+local TeamCheckBtn = createButton("🛡️ ตรวจจับทีมเดียวกัน (Team Check) : ON")
+
+createInput("⭕ ขนาดวง FOV:", FOV_Radius, function(val)
+    FOV_Radius = math.clamp(math.floor(val), 20, 500)
+    FOVCircle.Size = UDim2.fromOffset(FOV_Radius * 2, FOV_Radius * 2)
+end)
+
+local TeleportBtn = createButton("⚡ วาร์ปไปหาผู้เล่น")
+local FollowBtn = createButton("🛸 บินตามติดผู้เล่น : OFF")
+local OrbitBtn = createButton("🌀 หมุนวนรอบผู้เล่น : OFF")
+local SpectateBtn = createButton("👁️ ส่องกล้องผู้เล่น (Spectate) : OFF")
+
+local FlyBtn = createButton("🚀 ระบบบิน : OFF")
+local NoclipBtn = createButton("👻 เดินทะลุ (Noclip) : OFF")
+local InfJumpBtn = createButton("🦘 กระโดดรัวๆ (Infinite Jump) : OFF")
+local LowGravBtn = createButton("🌌 แรงโน้มถ่วงตัวเบา : OFF")
+local ClickTPBtn = createButton("📍 คลิกเพื่อวาร์ป (Click TP)")
+
+local ESPBtn = createButton("👁️ ESP ผู้เล่น (ชื่อ/ตัว) : OFF")
+local HitboxBtn = createButton("🎯 ขยาย Hitbox ตัวศัตรู : OFF")
+local FullbrightBtn = createButton("☀️ เปิดไฟสว่างทั่วแมพ : OFF")
+local CrosshairBtn = createButton("🎯 เปิดเป้าเล็งกลางหน้าจอ : OFF")
+
+local SpinBtn = createButton("🌀 หมุนตัวละครตัวเอง : OFF")
+local AutoClickBtn = createButton("⚔️ สับคลิกอัตโนมัติ (Auto Click) : OFF")
+local AntiAFKBtn = createButton("🛡️ กันโดนเตะออกจากเกม (Anti-AFK)")
+local RejoinBtn = createButton("🔄 เข้าเซิร์ฟเวอร์เดิมใหม่ (Rejoin)")
+
+createInput("💨 ความเร็วบิน:", FlySpeed, function(val)
+    FlySpeed = math.clamp(math.floor(val), 1, 1000)
+end)
+
+createInput("🏎️ ความเร็วรถ:", VehicleSpeed, function(val)
+    VehicleSpeed = math.clamp(math.floor(val), 1, 1000)
+end)
+
+-- Aimbot Toggle
+AimbotBtn.MouseButton1Click:Connect(function()
+    Aimbot_Enabled = not Aimbot_Enabled
+    FOVCircle.Visible = Aimbot_Enabled
+    AimbotBtn.Text = Aimbot_Enabled and "🎯 ล็อกหัวอัตโนมัติ (Aimbot) : ON" or "🎯 ล็อกหัวอัตโนมัติ (Aimbot) : OFF"
+    AimbotBtn.BackgroundColor3 = Aimbot_Enabled and Color3.fromRGB(120, 50, 200) or Color3.fromRGB(30, 30, 40)
+end)
+
+-- Team Check Toggle
+TeamCheckBtn.MouseButton1Click:Connect(function()
+    TeamCheck_Enabled = not TeamCheck_Enabled
+    TeamCheckBtn.Text = TeamCheck_Enabled and "🛡️ ตรวจจับทีมเดียวกัน : ON" or "🛡️ ตรวจจับทีมเดียวกัน : OFF"
+    TeamCheckBtn.BackgroundColor3 = TeamCheck_Enabled and Color3.fromRGB(50, 150, 50) or Color3.fromRGB(150, 50, 50)
+    updatePlayerList()
+end)
+
+-- Aimbot Event Listeners (Right Click Hold)
+UserInputService.InputBegan:Connect(function(input, gameProcessed)
+    if not gameProcessed and input.UserInputType == Enum.UserInputType.MouseButton2 then
+        IsAimbotActive = true
+    end
+end)
+
+UserInputService.InputEnded:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton2 then
+        IsAimbotActive = false
+    end
+end)
+
+-- Snap Break / FOV Target Checker Helper
+local function getClosestEnemyHeadInFOV()
+    local closestTarget = nil
+    local shortestDistance = math.huge
+    local mouseLoc = UserInputService:GetMouseLocation()
+    local cam = workspace.CurrentCamera
+
+    for _, plr in ipairs(Players:GetPlayers()) do
+        if isEnemy(plr) and plr.Character and plr.Character:FindFirstChild("Head") and plr.Character:FindFirstChildOfClass("Humanoid") then
+            local hum = plr.Character:FindFirstChildOfClass("Humanoid")
+            if hum.Health > 0 then
+                local head = plr.Character.Head
+                local pos, onScreen = cam:WorldToViewportPoint(head.Position)
+                if onScreen then
+                    local screenPos = Vector2.new(pos.X, pos.Y)
+                    local dist = (screenPos - mouseLoc).Magnitude
+                    -- ตรวจสอบว่าอยู่ในวง FOV ที่กำหนดไหม และใกล้ที่สุดไหม
+                    if dist <= FOV_Radius and dist < shortestDistance then
+                        shortestDistance = dist
+                        closestTarget = head
+                    end
+                end
+            end
+        end
+    end
+    return closestTarget
+end
+
+-- Stop Fly Helper
+local function stopFlying()
+    if bodyVel then bodyVel:Destroy() bodyVel = nil end
+    local char = LocalPlayer.Character
+    if char and char:FindFirstChildOfClass("Humanoid") then
+        char:FindFirstChildOfClass("Humanoid").PlatformStand = false
+    end
+end
+
+-- Teleport to Target
+TeleportBtn.MouseButton1Click:Connect(function()
+    if TargetPlayer and TargetPlayer.Character and TargetPlayer.Character:FindFirstChild("HumanoidRootPart") then
+        local myChar = LocalPlayer.Character
+        if myChar and myChar:FindFirstChild("HumanoidRootPart") then
+            myChar.HumanoidRootPart.CFrame = TargetPlayer.Character.HumanoidRootPart.CFrame * CFrame.new(0, 0, 3)
+        end
+    end
+end)
+
+-- Fly Follow
+FollowBtn.MouseButton1Click:Connect(function()
+    Follow_Enabled = not Follow_Enabled
+    if Follow_Enabled then Orbit_Enabled = false OrbitBtn.Text = "🌀 หมุนวนรอบผู้เล่น : OFF" OrbitBtn.BackgroundColor3 = Color3.fromRGB(30, 30, 40) end
+    FollowBtn.Text = Follow_Enabled and "🛸 บินตามติดผู้เล่น : ON" or "🛸 บินตามติดผู้เล่น : OFF"
+    FollowBtn.BackgroundColor3 = Follow_Enabled and Color3.fromRGB(120, 50, 200) or Color3.fromRGB(30, 30, 40)
+end)
+
+-- Orbit Target
+OrbitBtn.MouseButton1Click:Connect(function()
+    Orbit_Enabled = not Orbit_Enabled
+    if Orbit_Enabled then Follow_Enabled = false FollowBtn.Text = "🛸 บินตามติดผู้เล่น : OFF" FollowBtn.BackgroundColor3 = Color3.fromRGB(30, 30, 40) end
+    OrbitBtn.Text = Orbit_Enabled and "🌀 หมุนวนรอบผู้เล่น : ON" or "🌀 หมุนวนรอบผู้เล่น : OFF"
+    OrbitBtn.BackgroundColor3 = Orbit_Enabled and Color3.fromRGB(120, 50, 200) or Color3.fromRGB(30, 30, 40)
+end)
+
+-- Spectate Target
+SpectateBtn.MouseButton1Click:Connect(function()
+    Spectate_Enabled = not Spectate_Enabled
+    SpectateBtn.Text = Spectate_Enabled and "👁️ ส่องกล้องผู้เล่น : ON" or "👁️ ส่องกล้องผู้เล่น : OFF"
+    SpectateBtn.BackgroundColor3 = Spectate_Enabled and Color3.fromRGB(120, 50, 200) or Color3.fromRGB(30, 30, 40)
+    
+    local cam = workspace.CurrentCamera
+    if Spectate_Enabled and TargetPlayer and TargetPlayer.Character and TargetPlayer.Character:FindFirstChildOfClass("Humanoid") then
+        cam.CameraSubject = TargetPlayer.Character:FindFirstChildOfClass("Humanoid")
+    else
+        local myChar = LocalPlayer.Character
+        if myChar and myChar:FindFirstChildOfClass("Humanoid") then
+            cam.CameraSubject = myChar:FindFirstChildOfClass("Humanoid")
+        end
+    end
+end)
+
+-- Fly
+FlyBtn.MouseButton1Click:Connect(function()
+    Flying = not Flying
+    if Flying then
+        FlyBtn.Text = "🚀 ระบบบิน : ON"
+        FlyBtn.BackgroundColor3 = Color3.fromRGB(120, 50, 200)
+    else
+        FlyBtn.Text = "🚀 ระบบบิน : OFF"
+        FlyBtn.BackgroundColor3 = Color3.fromRGB(30, 30, 40)
+        stopFlying()
+    end
+end)
+
+-- Noclip
+NoclipBtn.MouseButton1Click:Connect(function()
+    Noclip = not Noclip
+    NoclipBtn.Text = Noclip and "👻 เดินทะลุ (Noclip) : ON" or "👻 เดินทะลุ (Noclip) : OFF"
+    NoclipBtn.BackgroundColor3 = Noclip and Color3.fromRGB(120, 50, 200) or Color3.fromRGB(30, 30, 40)
+end)
+
+-- Infinite Jump
+InfJumpBtn.MouseButton1Click:Connect(function()
+    InfJump_Enabled = not InfJump_Enabled
+    InfJumpBtn.Text = InfJump_Enabled and "🦘 กระโดดรัวๆ : ON" or "🦘 กระโดดรัวๆ : OFF"
+    InfJumpBtn.BackgroundColor3 = InfJump_Enabled and Color3.fromRGB(120, 50, 200) or Color3.fromRGB(30, 30, 40)
+end)
+
+UserInputService.JumpRequest:Connect(function()
+    if InfJump_Enabled then
+        local char = LocalPlayer.Character
+        if char and char:FindFirstChildOfClass("Humanoid") then
+            char:FindFirstChildOfClass("Humanoid"):ChangeState(Enum.HumanoidStateType.Jumping)
+        end
+    end
+end)
+
+-- Low Gravity
+LowGravBtn.MouseButton1Click:Connect(function()
+    LowGrav_Enabled = not LowGrav_Enabled
+    workspace.Gravity = LowGrav_Enabled and 40 or 196.2
+    LowGravBtn.Text = LowGrav_Enabled and "🌌 แรงโน้มถ่วงตัวเบา : ON" or "🌌 แรงโน้มถ่วงตัวเบา : OFF"
+    LowGravBtn.BackgroundColor3 = LowGrav_Enabled and Color3.fromRGB(120, 50, 200) or Color3.fromRGB(30, 30, 40)
+end)
+
+-- Click TP
+ClickTPBtn.MouseButton1Click:Connect(function()
+    local mouse = LocalPlayer:GetMouse()
+    if mouse and mouse.Hit then
+        local char = LocalPlayer.Character
+        if char and char:FindFirstChild("HumanoidRootPart") then
+            char.HumanoidRootPart.CFrame = CFrame.new(mouse.Hit.Position + Vector3.new(0, 3, 0))
+        end
+    end
+end)
+
+-- ESP Toggle
+ESPBtn.MouseButton1Click:Connect(function()
+    ESP_Enabled = not ESP_Enabled
+    ESPBtn.Text = ESP_Enabled and "👁️ ESP ผู้เล่น : ON" or "👁️ ESP ผู้เล่น : OFF"
+    ESPBtn.BackgroundColor3 = ESP_Enabled and Color3.fromRGB(120, 50, 200) or Color3.fromRGB(30, 30, 40)
+end)
+
+-- Hitbox Expander
+HitboxBtn.MouseButton1Click:Connect(function()
+    Hitbox_Enabled = not Hitbox_Enabled
+    HitboxBtn.Text = Hitbox_Enabled and "🎯 ขยาย Hitbox ตัวศัตรู : ON" or "🎯 ขยาย Hitbox ตัวศัตรู : OFF"
+    HitboxBtn.BackgroundColor3 = Hitbox_Enabled and Color3.fromRGB(120, 50, 200) or Color3.fromRGB(30, 30, 40)
+    
+    for _, plr in ipairs(Players:GetPlayers()) do
+        if plr ~= LocalPlayer and plr.Character and plr.Character:FindFirstChild("HumanoidRootPart") then
+            local hrp = plr.Character.HumanoidRootPart
+            if Hitbox_Enabled and isEnemy(plr) then
+                hrp.Size = Vector3.new(12, 12, 12)
+                hrp.Transparency = 0.7
+                hrp.BrickColor = BrickColor.new("Really purple")
+                hrp.Material = Enum.Material.Neon
+                hrp.CanCollide = false
+            else
+                hrp.Size = Vector3.new(2, 2, 1)
+                hrp.Transparency = 1
+            end
+        end
+    end
+end)
+
+-- Fullbright
+FullbrightBtn.MouseButton1Click:Connect(function()
+    Fullbright_Enabled = not Fullbright_Enabled
+    FullbrightBtn.Text = Fullbright_Enabled and "☀️ เปิดไฟสว่างทั่วแมพ : ON" or "☀️ เปิดไฟสว่างทั่วแมพ : OFF"
+    FullbrightBtn.BackgroundColor3 = Fullbright_Enabled and Color3.fromRGB(120, 50, 200) or Color3.fromRGB(30, 30, 40)
+    if Fullbright_Enabled then
+        Lighting.Ambient = Color3.fromRGB(255, 255, 255)
+        Lighting.Brightness = 2
+        Lighting.ClockTime = 14
+        Lighting.FogEnd = 1e10
+    else
+        Lighting.Ambient = Color3.fromRGB(128, 128, 128)
+        Lighting.Brightness = 1
+    end
+end)
+
+-- Crosshair GUI
+local CrosshairFrame = Instance.new("Frame")
+CrosshairFrame.Size = UDim2.fromOffset(4, 4)
+CrosshairFrame.Position = UDim2.new(0.5, -2, 0.5, -2)
+CrosshairFrame.BackgroundColor3 = Color3.fromRGB(200, 100, 255)
+CrosshairFrame.BorderSizePixel = 0
+CrosshairFrame.Visible = false
+CrosshairFrame.Parent = ScreenGui
+
+CrosshairBtn.MouseButton1Click:Connect(function()
+    Crosshair_Enabled = not Crosshair_Enabled
+    CrosshairFrame.Visible = Crosshair_Enabled
+    CrosshairBtn.Text = Crosshair_Enabled and "🎯 เปิดเป้าเล็งกลางหน้าจอ : ON" or "🎯 เปิดเป้าเล็งกลางหน้าจอ : OFF"
+    CrosshairBtn.BackgroundColor3 = Crosshair_Enabled and Color3.fromRGB(120, 50, 200) or Color3.fromRGB(30, 30, 40)
+end)
+
+-- Spinbot
+SpinBtn.MouseButton1Click:Connect(function()
+    Spin_Enabled = not Spin_Enabled
+    SpinBtn.Text = Spin_Enabled and "🌀 หมุนตัวละครตัวเอง : ON" or "🌀 หมุนตัวละครตัวเอง : OFF"
+    SpinBtn.BackgroundColor3 = Spin_Enabled and Color3.fromRGB(120, 50, 200) or Color3.fromRGB(30, 30, 40)
+end)
+
+-- Auto Clicker
+AutoClickBtn.MouseButton1Click:Connect(function()
+    AutoClick_Enabled = not AutoClick_Enabled
+    AutoClickBtn.Text = AutoClick_Enabled and "⚔️ สับคลิกอัตโนมัติ : ON" or "⚔️ สับคลิกอัตโนมัติ : OFF"
+    AutoClickBtn.BackgroundColor3 = AutoClick_Enabled and Color3.fromRGB(120, 50, 200) or Color3.fromRGB(30, 30, 40)
+end)
+
+task.spawn(function()
+    while true do
+        task.wait(0.05)
+        if AutoClick_Enabled then
+            local char = LocalPlayer.Character
+            if char then
+                local tool = char:FindFirstChildOfClass("Tool")
+                if tool then tool:Activate() end
+            end
+        end
+    end
+end)
+
+-- Anti-AFK
+AntiAFKBtn.MouseButton1Click:Connect(function()
+    local vu = game:GetService("VirtualUser")
+    LocalPlayer.Idled:Connect(function()
+        vu:Button2Down(Vector2.new(0,0), workspace.CurrentCamera.CFrame)
+        task.wait(1)
+        vu:Button2Up(Vector2.new(0,0), workspace.CurrentCamera.CFrame)
+    end)
+    AntiAFKBtn.Text = "🛡️ กัน AFK เปิดใช้งานแล้ว!"
+    AntiAFKBtn.BackgroundColor3 = Color3.fromRGB(50, 150, 50)
+end)
+
+-- Rejoin Server
+RejoinBtn.MouseButton1Click:Connect(function()
+    TeleportService:TeleportToPlaceInstance(game.PlaceId, game.JobId, LocalPlayer)
+end)
+
+-- ESP Function
+local function updateESP()
+    for _, plr in ipairs(Players:GetPlayers()) do
+        if plr ~= LocalPlayer and plr.Character then
+            local char = plr.Character
+            local hl = char:FindFirstChild("LS_ESP_HL")
+            local bg = char:FindFirstChild("LS_ESP_BG")
+            
+            if ESP_Enabled and isEnemy(plr) then
+                if not hl then
+                    hl = Instance.new("Highlight")
+                    hl.Name = "LS_ESP_HL"
+                    hl.FillColor = Color3.fromRGB(180, 50, 255)
+                    hl.OutlineColor = Color3.fromRGB(255, 255, 255)
+                    hl.FillTransparency = 0.5
+                    hl.Parent = char
+                end
+                
+                if not bg and char:FindFirstChild("Head") then
+                    bg = Instance.new("BillboardGui")
+                    bg.Name = "LS_ESP_BG"
+                    bg.AlwaysOnTop = true
+                    bg.Size = UDim2.new(0, 120, 0, 30)
+                    bg.StudsOffset = Vector3.new(0, 3, 0)
+                    bg.Adornee = char.Head
+                    bg.Parent = char
+                    
+                    local lbl = Instance.new("TextLabel")
+                    lbl.Size = UDim2.new(1, 0, 1, 0)
+                    lbl.BackgroundTransparency = 1
+                    lbl.Text = "👤 " .. (plr.DisplayName or plr.Name)
+                    lbl.TextColor3 = Color3.fromRGB(255, 255, 255)
+                    lbl.TextStrokeTransparency = 0
+                    lbl.TextSize = 12
+                    lbl.Font = Enum.Font.SourceSansBold
+                    lbl.Parent = bg
+                end
+            else
+                if hl then hl:Destroy() end
+                if bg then bg:Destroy() end
+            end
+        end
+    end
+end
+
+-- =========================================================
+-- 🔄 MAIN RENDER LOOP
+-- =========================================================
+RunService.RenderStepped:Connect(function(dt)
+    -- Aimbot Execution with Snap Break & FOV Check (Hold Right Click)
+    if Aimbot_Enabled and IsAimbotActive then
+        local enemyHead = getClosestEnemyHeadInFOV()
+        if enemyHead then
+            workspace.CurrentCamera.CFrame = CFrame.new(workspace.CurrentCamera.CFrame.Position, enemyHead.Position)
+        end
+    end
+
+    local char = LocalPlayer.Character
+    if char then
+        local hrp = char:FindFirstChild("HumanoidRootPart")
+        local hum = char:FindFirstChildOfClass("Humanoid")
+        
+        if hrp and hum then
+            -- Noclip
+            if Noclip or Follow_Enabled or Orbit_Enabled then
+                for _, part in ipairs(char:GetDescendants()) do
+                    if part:IsA("BasePart") then part.CanCollide = false end
+                end
+            end
+            
+            -- Fly Follow Target
+            if Follow_Enabled and TargetPlayer and TargetPlayer.Character and TargetPlayer.Character:FindFirstChild("HumanoidRootPart") then
+                local tHrp = TargetPlayer.Character.HumanoidRootPart
+                hrp.CFrame = tHrp.CFrame * CFrame.new(0, 2, 4)
+                hrp.AssemblyLinearVelocity = Vector3.zero
+            end
+            
+            -- Orbit Target
+            if Orbit_Enabled and TargetPlayer and TargetPlayer.Character and TargetPlayer.Character:FindFirstChild("HumanoidRootPart") then
+                local tHrp = TargetPlayer.Character.HumanoidRootPart
+                orbitAngle = orbitAngle + (180 * dt)
+                local rad = math.rad(orbitAngle)
+                local offset = Vector3.new(math.sin(rad) * 6, 2, math.cos(rad) * 6)
+                hrp.CFrame = CFrame.new(tHrp.Position + offset, tHrp.Position)
+                hrp.AssemblyLinearVelocity = Vector3.zero
+            end
+            
+            -- Spinbot
+            if Spin_Enabled then
+                hrp.CFrame = hrp.CFrame * CFrame.Angles(0, math.rad(25), 0)
+            end
+            
+            -- Vehicle Speed
+            if hum.SeatPart and hum.SeatPart:IsA("VehicleSeat") then
+                local seat = hum.SeatPart
+                seat.MaxSpeed = VehicleSpeed
+                if seat.Throttle ~= 0 then
+                    seat.AssemblyLinearVelocity = seat.CFrame.LookVector * (seat.Throttle * VehicleSpeed)
+                end
+            end
+            
+            -- 3D Flying
+            if Flying and not Follow_Enabled and not Orbit_Enabled then
+                hum.PlatformStand = true
+                
+                if not bodyVel or bodyVel.Parent ~= hrp then
+                    if hrp:FindFirstChild("LS_FlyVel") then hrp.LS_FlyVel:Destroy() end
+                    bodyVel = Instance.new("BodyVelocity")
+                    bodyVel.Name = "LS_FlyVel"
+                    bodyVel.MaxForce = Vector3.new(9e9, 9e9, 9e9)
+                    bodyVel.Velocity = Vector3.zero
+                    bodyVel.Parent = hrp
+                end
+                
+                local cam = workspace.CurrentCamera
+                local moveDir = hum.MoveDirection
+                
+                if moveDir.Magnitude > 0 then
+                    local localMove = cam.CFrame:VectorToObjectSpace(moveDir)
+                    local flyDir = (cam.CFrame.LookVector * -localMove.Z) + (cam.CFrame.RightVector * localMove.X)
+                    
+                    if flyDir.Magnitude > 0 then
+                        hrp.CFrame = hrp.CFrame + (flyDir.Unit * (FlySpeed * dt))
+                    end
+                end
+                
+                bodyVel.Velocity = Vector3.zero
+            end
+        end
+    end
+    
+    updateESP()
+end)
